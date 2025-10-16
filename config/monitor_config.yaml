@@ -1,0 +1,12 @@
+/**:
+  ros__parameters:
+    # ===========================================
+    # Monitor Node Parameters
+    # ===========================================
+    monitor/loop_rate_hz: 10.0
+    
+    # Lap tracking parameters
+    monitor/start_zone_threshold: 1.0  # Start zone: s < threshold or s > max_s - threshold
+    
+    # Display parameters
+    monitor/text_size: 20

@@ -172,18 +172,20 @@ void Monitor::UpdateLapInfo(const nav_msgs::msg::Odometry& frenet_odom) {
         // Record lap time if it's not the first lap (regardless of start validity)
         if (lap_count_ > 0) {
             lap_times_.push_back(lap_time);
+            previous_lap_time_ = lap_time;  // Store previous lap time
             
             // Update fastest lap time
             if (lap_time < fastest_lap_time_) {
                 fastest_lap_time_ = lap_time;
             }
             
-            // Calculate mean lap time
+            // Calculate mean lap time for recent 5 laps
+            size_t recent_laps = std::min(static_cast<size_t>(5), lap_times_.size());
             double sum = 0.0;
-            for (double time : lap_times_) {
-                sum += time;
+            for (size_t i = lap_times_.size() - recent_laps; i < lap_times_.size(); i++) {
+                sum += lap_times_[i];
             }
-            mean_lap_time_ = sum / lap_times_.size();
+            mean_lap_time_ = sum / recent_laps;
             
             RCLCPP_INFO(this->get_logger(), 
                        "Lap %d completed! Time: %.2f s, Fastest: %.2f s, Mean: %.2f s, Mean CTE: %.3f m", 
@@ -223,9 +225,15 @@ void Monitor::PublishLapInfo() {
     auto current_time = this->get_clock()->now();
     double current_lap_time = (current_time - lap_start_time_).seconds();
     
-    // Create lap info text with current lap number and current lap time
-    lap_msg.text = "Lap: " + std::to_string(lap_count_) + 
-                   ", Lap time: " + std::to_string(current_lap_time).substr(0, 5) + "s";
+    // Create lap info text with current lap number, current lap time, and previous lap time
+    std::string lap_text = "Lap: " + std::to_string(lap_count_) + 
+                          " | Lap Time: " + std::to_string(current_lap_time).substr(0, 5) + "s";
+    
+    if (previous_lap_time_ > 0.0) {
+        lap_text += " | Prev. Lap Time: " + std::to_string(previous_lap_time_).substr(0, 5) + "s";
+    }
+    
+    lap_msg.text = lap_text;
     
     p_lap_info_->publish(lap_msg);
 }
@@ -236,9 +244,9 @@ void Monitor::PublishMeanLapTime() {
     msg.text_size = text_size_;
     
     if (lap_times_.empty()) {
-        msg.text = "Mean Lap Time: N/A";
+        msg.text = "Mean Lap Time (5lap): N/A";
     } else {
-        msg.text = "Mean Lap Time: " + std::to_string(mean_lap_time_).substr(0, 5) + "s";
+        msg.text = "Mean Lap Time (5lap): " + std::to_string(mean_lap_time_).substr(0, 5) + "s";
     }
     
     p_mean_lap_time_->publish(msg);

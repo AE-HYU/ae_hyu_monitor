@@ -113,7 +113,8 @@ class Monitor : public rclcpp::Node {
         rclcpp::Time lap_start_time_;
         std::vector<double> lap_times_;  // Store completed lap times
         double fastest_lap_time_ = std::numeric_limits<double>::max();
-        double mean_lap_time_ = 0.0;
+        double mean_lap_time_ = 0.0;     // Mean lap time for recent 5 laps
+        double previous_lap_time_ = 0.0;  // Store previous completed lap time
         
         // CTE tracking variables
         std::vector<double> cte_values_;  // Store CTE values for current lap

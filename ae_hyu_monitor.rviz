@@ -270,7 +270,7 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        {}
+        "": true
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -361,7 +361,7 @@ Visualization Manager:
       text size: 18
       ver_alignment: top
       ver_dist: 110
-      width: 400
+      width: 800
     - Align Bottom: false
       Background Alpha: 0.800000011920929
       Background Color: 0; 0; 0
@@ -562,7 +562,7 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -574,7 +574,7 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile

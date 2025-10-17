@@ -7,25 +7,30 @@ Monitor::Monitor(const std::string &node_name, const rclcpp::NodeOptions &option
     auto qos_profile = rclcpp::QoS(rclcpp::KeepLast(10));
     
     // Parameters - declare and get values
-    this->declare_parameter("monitor/loop_rate_hz", 20.0);
+    this->declare_parameter("monitor/loop_rate_hz", 10.0);
     this->declare_parameter("monitor/start_zone_threshold", 1.0);
     this->declare_parameter("monitor/text_size", 14);
+    this->declare_parameter("monitor/odom_topic", "/odom");
 
     loop_rate_hz_ = this->get_parameter("monitor/loop_rate_hz").as_double();
     start_zone_threshold_ = this->get_parameter("monitor/start_zone_threshold").as_double();
     text_size_ = this->get_parameter("monitor/text_size").as_int();
+    std::string odom_topic = this->get_parameter("monitor/odom_topic").as_string();
 
     RCLCPP_INFO(this->get_logger(), "loop_rate_hz: %f", loop_rate_hz_);
     RCLCPP_INFO(this->get_logger(), "start_zone_threshold: %f", start_zone_threshold_);
     RCLCPP_INFO(this->get_logger(), "text_size: %d", text_size_);
+    RCLCPP_INFO(this->get_logger(), "odom_topic: %s", odom_topic.c_str());
 
     // Subscribers init
     s_odom_ = this->create_subscription<nav_msgs::msg::Odometry>(
-        "/ego_racecar/odom", qos_profile, std::bind(&Monitor::CallbackOdom, this, std::placeholders::_1));
+        odom_topic, qos_profile, std::bind(&Monitor::CallbackOdom, this, std::placeholders::_1));
     s_frenet_odom_ = this->create_subscription<nav_msgs::msg::Odometry>(
         "/car_state/frenet/odom", qos_profile, std::bind(&Monitor::CallbackFrenetOdom, this, std::placeholders::_1));
     s_global_waypoints_ = this->create_subscription<ae_hyu_msgs::msg::WpntArray>(
         "/global_waypoints", qos_profile, std::bind(&Monitor::CallbackGlobalWaypoints, this, std::placeholders::_1));
+    s_obstacles_ = this->create_subscription<ae_hyu_msgs::msg::ObstacleArray>(
+        "/tracking/obstacles", qos_profile, std::bind(&Monitor::CallbackObstacles, this, std::placeholders::_1));
 
     // Publisher init
     p_lap_info_ = this->create_publisher<rviz_2d_overlay_msgs::msg::OverlayText>(
@@ -42,6 +47,8 @@ Monitor::Monitor(const std::string &node_name, const rclcpp::NodeOptions &option
         "/monitor/max_cte", qos_profile);
     p_current_cte_ = this->create_publisher<rviz_2d_overlay_msgs::msg::OverlayText>(
         "/monitor/current_cte", qos_profile);
+    p_obstacle_info_ = this->create_publisher<rviz_2d_overlay_msgs::msg::OverlayText>(
+        "/monitor/obstacle_info", qos_profile);
         
     // Timer init
     t_run_node_ = this->create_wall_timer(
@@ -99,6 +106,9 @@ void Monitor::Run() {
     PublishMaxCTE();
     PublishCurrentCTE();
 
+    // Publish obstacle information
+    PublishObstacleInfo();
+
     // Publish speed information
     PublishSpeedInfo(odom);
 }
@@ -137,10 +147,13 @@ void Monitor::UpdateLapInfo(const nav_msgs::msg::Odometry& frenet_odom) {
                        current_s, start_zone_threshold_);
         } else {
             is_race_started_ = false;
-            lap_count_ = -1;  // Indicate invalid start
+            lap_count_ = 0;  // Start counting from 0 even for invalid start
+            lap_start_time_ = this->get_clock()->now();  // Start timing even for invalid start
             RCLCPP_WARN(this->get_logger(), 
                        "Race started from middle of track! Current s: %.2f, max_s: %.2f, threshold: %.2f", 
                        current_s, max_s_, start_zone_threshold_);
+            RCLCPP_WARN(this->get_logger(), 
+                       "Lap counting and timing enabled from invalid start position!");
         }
         
         previous_s_ = current_s;
@@ -149,14 +162,14 @@ void Monitor::UpdateLapInfo(const nav_msgs::msg::Odometry& frenet_odom) {
     }
     
     // Lap completion detection: crossed from high s to low s
-    if (is_race_started_ && previous_s_ > (max_s_ - start_zone_threshold_) && 
+    if (previous_s_ > (max_s_ - start_zone_threshold_) && 
         current_s < start_zone_threshold_) {
         
         // Calculate lap time
         auto current_time = this->get_clock()->now();
         double lap_time = (current_time - lap_start_time_).seconds();
         
-        // Only record lap time if it's not the first lap (lap 0 -> lap 1)
+        // Record lap time if it's not the first lap (regardless of start validity)
         if (lap_count_ > 0) {
             lap_times_.push_back(lap_time);
             
@@ -206,13 +219,13 @@ void Monitor::PublishLapInfo() {
     lap_msg.action = rviz_2d_overlay_msgs::msg::OverlayText::ADD;
     lap_msg.text_size = text_size_;  // Use parameter value
 
+    // Calculate current lap time (time since lap started)
+    auto current_time = this->get_clock()->now();
+    double current_lap_time = (current_time - lap_start_time_).seconds();
     
-    // Create simple lap info text - just the lap number
-    if (!is_race_started_ && lap_count_ == -1) {
-        lap_msg.text = "Invalid Start!";
-    } else {
-        lap_msg.text = "Lap: " + std::to_string(lap_count_);
-    }
+    // Create lap info text with current lap number and current lap time
+    lap_msg.text = "Lap: " + std::to_string(lap_count_) + 
+                   ", Lap time: " + std::to_string(current_lap_time).substr(0, 5) + "s";
     
     p_lap_info_->publish(lap_msg);
 }
@@ -249,8 +262,8 @@ void Monitor::UpdateCTE(const nav_msgs::msg::Odometry& frenet_odom) {
     // Get current Cross Track Error (frenet d coordinate)
     current_cte_ = std::abs(frenet_odom.pose.pose.position.y);
     
-    // Only track CTE if race is started and not on first lap (lap 0)
-    if (is_race_started_ && lap_count_ > 0) {
+    // Track CTE if we have valid data (lap_count > 0)
+    if (lap_count_ > 0) {
         // Update current lap CTE statistics
         current_lap_cte_sum_ += current_cte_;
         current_lap_cte_count_++;
@@ -273,7 +286,7 @@ void Monitor::PublishMeanCTE() {
     msg.action = rviz_2d_overlay_msgs::msg::OverlayText::ADD;
     msg.text_size = text_size_;
     
-    if (!is_race_started_ || lap_count_ <= 0 || total_cte_count_ == 0) {
+    if (total_cte_count_ == 0) {
         msg.text = "Mean CTE (10lap): N/A";
     } else {
         msg.text = "Mean CTE (10lap): " + std::to_string(ten_lap_mean_cte_).substr(0, 5) + "m";
@@ -287,7 +300,7 @@ void Monitor::PublishMaxCTE() {
     msg.action = rviz_2d_overlay_msgs::msg::OverlayText::ADD;
     msg.text_size = text_size_;
     
-    if (!is_race_started_ || lap_count_ <= 0 || max_cte_ == 0.0) {
+    if (max_cte_ == 0.0) {
         msg.text = "Max CTE: N/A";
     } else {
         msg.text = "Max CTE: " + std::to_string(max_cte_).substr(0, 5) + "m";
@@ -301,13 +314,46 @@ void Monitor::PublishCurrentCTE() {
     msg.action = rviz_2d_overlay_msgs::msg::OverlayText::ADD;
     msg.text_size = text_size_;
     
-    if (!is_race_started_) {
-        msg.text = "Current CTE: N/A";
-    } else {
-        msg.text = "Current CTE: " + std::to_string(current_cte_).substr(0, 5) + "m";
-    }
+    // Show current CTE always (even for invalid starts)
+    msg.text = "Current CTE: " + std::to_string(current_cte_).substr(0, 5) + "m";
     
     p_current_cte_->publish(msg);
+}
+
+void Monitor::PublishObstacleInfo() {
+    rviz_2d_overlay_msgs::msg::OverlayText msg;
+    msg.action = rviz_2d_overlay_msgs::msg::OverlayText::ADD;
+    msg.text_size = text_size_;
+    
+    std::string obstacle_info_text = "";
+    
+    bool is_static_detected = false;
+    bool is_dynamic_detected = false;
+    
+    // Check if we have obstacle data
+    if (b_is_obstacles_) {
+        std::lock_guard<std::mutex> lock(mutex_obstacles_);
+        
+        // Analyze obstacles to find static and dynamic ones
+        for (const auto& obstacle : i_current_obstacles_.obstacles) {
+            if (obstacle.is_static) {
+                is_static_detected = true;
+            } else {
+                is_dynamic_detected = true;
+            }
+        }
+    }
+    
+    // Create obstacle info text with line breaks
+    if (!b_is_obstacles_) {
+        obstacle_info_text += "Static: N/A\nDynamic: N/A";
+    } else {
+        obstacle_info_text += "Static: " + std::string(is_static_detected ? "True" : "False") + 
+                             "\nDynamic: " + std::string(is_dynamic_detected ? "True" : "False");
+    }
+    
+    msg.text = obstacle_info_text;
+    p_obstacle_info_->publish(msg);
 }
 
 int main(int argc, char **argv) {

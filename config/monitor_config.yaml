@@ -9,4 +9,4 @@
     monitor/start_zone_threshold: 1.0  # Start zone: s < threshold or s > max_s - threshold
     
     # Display parameters
-    monitor/text_size: 20
+    monitor/text_size: 18

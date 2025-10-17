@@ -7,6 +7,7 @@
 #include <rviz_2d_overlay_msgs/msg/overlay_text.hpp>
 #include <std_msgs/msg/float32.hpp>
 #include <ae_hyu_msgs/msg/wpnt_array.hpp>
+#include <ae_hyu_msgs/msg/obstacle_array.hpp>
 #include <mutex>
 #include <vector>
 #include <limits>
@@ -38,9 +39,12 @@ class Monitor : public rclcpp::Node {
             if (!msg->wpnts.empty() && !b_is_max_s_) {
                 max_s_ = msg->wpnts.back().s_m;  // Get the last s value as max_s
                 b_is_max_s_ = true;
-                
-                RCLCPP_INFO(this->get_logger(), "Track max_s detected: %.2f m", max_s_);
             }
+        }
+        inline void CallbackObstacles(const ae_hyu_msgs::msg::ObstacleArray::SharedPtr msg) {
+            std::lock_guard<std::mutex> lock(mutex_obstacles_);
+            i_current_obstacles_ = *msg;
+            b_is_obstacles_ = true;
         }
 
         // Monitor function
@@ -53,6 +57,7 @@ class Monitor : public rclcpp::Node {
         void PublishMeanCTE();
         void PublishMaxCTE();
         void PublishCurrentCTE();
+        void PublishObstacleInfo();
 
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - //
         // Variable
@@ -61,14 +66,17 @@ class Monitor : public rclcpp::Node {
         rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr                    s_odom_;
         rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr                    s_frenet_odom_;
         rclcpp::Subscription<ae_hyu_msgs::msg::WpntArray>::SharedPtr                s_global_waypoints_;
+        rclcpp::Subscription<ae_hyu_msgs::msg::ObstacleArray>::SharedPtr            s_obstacles_;
 
         // Input
         nav_msgs::msg::Odometry                      i_current_odom_;
         nav_msgs::msg::Odometry                      i_current_frenet_odom_;
+        ae_hyu_msgs::msg::ObstacleArray               i_current_obstacles_;
 
         // Mutex
         std::mutex mutex_odom_;
         std::mutex mutex_frenet_odom_;
+        std::mutex mutex_obstacles_;
 
         // Publishers
         rclcpp::Publisher<rviz_2d_overlay_msgs::msg::OverlayText>::SharedPtr  p_lap_info_;
@@ -78,6 +86,7 @@ class Monitor : public rclcpp::Node {
         rclcpp::Publisher<rviz_2d_overlay_msgs::msg::OverlayText>::SharedPtr  p_mean_cte_;
         rclcpp::Publisher<rviz_2d_overlay_msgs::msg::OverlayText>::SharedPtr  p_max_cte_;
         rclcpp::Publisher<rviz_2d_overlay_msgs::msg::OverlayText>::SharedPtr  p_current_cte_;
+        rclcpp::Publisher<rviz_2d_overlay_msgs::msg::OverlayText>::SharedPtr  p_obstacle_info_;
 
         // Timer
         rclcpp::TimerBase::SharedPtr t_run_node_;
@@ -86,6 +95,7 @@ class Monitor : public rclcpp::Node {
         bool b_is_odom_ = false;
         bool b_is_frenet_odom_ = false;
         bool b_is_max_s_ = false;
+        bool b_is_obstacles_ = false;
 
         // Global Variables
         double loop_rate_hz_;

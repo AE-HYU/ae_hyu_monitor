@@ -31,7 +31,6 @@ Panels:
         - /Status1
         - /Behavior state1/Topic1
         - /Max CTE1/Topic1
-        - /TextOverlay1
       Splitter Ratio: 0.5
     Tree Height: 795
 Visualization Manager:
@@ -245,7 +244,7 @@ Visualization Manager:
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
-      Name: MarkerArray
+      Name: Global trajectory
       Namespaces:
         global_waypoints: true
       Topic:
@@ -257,7 +256,7 @@ Visualization Manager:
       Value: true
     - Class: rviz_default_plugins/MarkerArray
       Enabled: true
-      Name: MarkerArray
+      Name: Local trajectory
       Namespaces:
         local_waypoints: true
       Topic:
@@ -271,7 +270,7 @@ Visualization Manager:
       Enabled: true
       Name: MarkerArray
       Namespaces:
-        "": true
+        {}
       Topic:
         Depth: 5
         Durability Policy: Volatile
@@ -559,6 +558,30 @@ Visualization Manager:
       ver_alignment: top
       ver_dist: 10
       width: 250
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MarkerArray
+      Namespaces:
+        "": true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /detection/breakpoints_markers
+      Value: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MarkerArray
+      Namespaces:
+        "": true
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /detection/obstacles_markers
+      Value: true
   Enabled: true
   Global Options:
     Background Color: 48; 48; 48

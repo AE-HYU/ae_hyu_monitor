@@ -46,9 +46,15 @@ class Monitor : public rclcpp::Node {
             i_current_obstacles_ = *msg;
             b_is_obstacles_ = true;
         }
+        inline void CallbackSteeringInput(const ackermann_msgs::msg::AckermannDriveStamped::SharedPtr msg) {
+            std::lock_guard<std::mutex> lock(mutex_steering_input_);
+            i_current_steering_input_ = *msg;
+            b_is_steering_input_ = true;
+        }
 
         // Monitor function
         void PublishSpeedInfo(const nav_msgs::msg::Odometry& odom);
+        void PublishSteeringInput();
         void UpdateLapInfo(const nav_msgs::msg::Odometry& frenet_odom);
         void PublishLapInfo();
         void PublishMeanLapTime();
@@ -59,6 +65,9 @@ class Monitor : public rclcpp::Node {
         void PublishCurrentCTE();
         void PublishObstacleInfo();
 
+        // Helper function for time formatting
+        std::string format_time_3dp(double time_val);
+
         // - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - //
         // Variable
 
@@ -67,20 +76,24 @@ class Monitor : public rclcpp::Node {
         rclcpp::Subscription<nav_msgs::msg::Odometry>::SharedPtr                    s_frenet_odom_;
         rclcpp::Subscription<ae_hyu_msgs::msg::WpntArray>::SharedPtr                s_global_waypoints_;
         rclcpp::Subscription<ae_hyu_msgs::msg::ObstacleArray>::SharedPtr            s_obstacles_;
+        rclcpp::Subscription<ackermann_msgs::msg::AckermannDriveStamped>::SharedPtr s_steering_input_;
 
         // Input
-        nav_msgs::msg::Odometry                      i_current_odom_;
-        nav_msgs::msg::Odometry                      i_current_frenet_odom_;
+        nav_msgs::msg::Odometry                       i_current_odom_;
+        nav_msgs::msg::Odometry                       i_current_frenet_odom_;
         ae_hyu_msgs::msg::ObstacleArray               i_current_obstacles_;
+        ackermann_msgs::msg::AckermannDriveStamped    i_current_steering_input_;
 
         // Mutex
         std::mutex mutex_odom_;
         std::mutex mutex_frenet_odom_;
         std::mutex mutex_obstacles_;
+        std::mutex mutex_steering_input_;
 
         // Publishers
         rclcpp::Publisher<rviz_2d_overlay_msgs::msg::OverlayText>::SharedPtr  p_lap_info_;
         rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr                  p_current_speed_info_;
+        rclcpp::Publisher<std_msgs::msg::Float32>::SharedPtr                  p_steering_input_;
         rclcpp::Publisher<rviz_2d_overlay_msgs::msg::OverlayText>::SharedPtr  p_mean_lap_time_;
         rclcpp::Publisher<rviz_2d_overlay_msgs::msg::OverlayText>::SharedPtr  p_fastest_lap_time_;
         rclcpp::Publisher<rviz_2d_overlay_msgs::msg::OverlayText>::SharedPtr  p_mean_cte_;
@@ -96,6 +109,7 @@ class Monitor : public rclcpp::Node {
         bool b_is_frenet_odom_ = false;
         bool b_is_max_s_ = false;
         bool b_is_obstacles_ = false;
+        bool b_is_steering_input_ = false;
 
         // Global Variables
         double loop_rate_hz_;

@@ -50,6 +50,7 @@ ros2 launch ae_hyu_monitor monitor_launch.py mod:=real
 ## 토픽 발행
 - `/monitor/lap_info`: 랩 정보 시각화 (OverlayText)
 - `/monitor/current_speed`: 현재 속도 정보 (Float32)
+- `/monitor/steering_input`: 조향 입력 정보 (Float32)
 - `/monitor/mean_lap_time`: 평균 랩 타임 시각화 (OverlayText)
 - `/monitor/fastest_lap_time`: 최단 랩 타임 시각화 (OverlayText)
 - `/monitor/mean_cte`: 평균 CTE 시각화 (OverlayText)

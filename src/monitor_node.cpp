@@ -1,4 +1,6 @@
 #include "monitor_node.hpp"
+#include <iomanip>
+#include <sstream>
 
 Monitor::Monitor(const std::string &node_name, const rclcpp::NodeOptions &options)
     : Node(node_name, options), lap_start_time_(this->get_clock()->now()) {
@@ -31,12 +33,16 @@ Monitor::Monitor(const std::string &node_name, const rclcpp::NodeOptions &option
         "/global_waypoints", qos_profile, std::bind(&Monitor::CallbackGlobalWaypoints, this, std::placeholders::_1));
     s_obstacles_ = this->create_subscription<ae_hyu_msgs::msg::ObstacleArray>(
         "/tracking/obstacles", qos_profile, std::bind(&Monitor::CallbackObstacles, this, std::placeholders::_1));
+    s_steering_input_ = this->create_subscription<ackermann_msgs::msg::AckermannDriveStamped>(
+        "/drive", qos_profile, std::bind(&Monitor::CallbackSteeringInput, this, std::placeholders::_1));
 
     // Publisher init
     p_lap_info_ = this->create_publisher<rviz_2d_overlay_msgs::msg::OverlayText>(
         "/monitor/lap_info", qos_profile);
     p_current_speed_info_ = this->create_publisher<std_msgs::msg::Float32>(
         "/monitor/current_speed", qos_profile);
+    p_steering_input_ = this->create_publisher<std_msgs::msg::Float32>(
+        "/monitor/steering_input", qos_profile);
     p_mean_lap_time_ = this->create_publisher<rviz_2d_overlay_msgs::msg::OverlayText>(
         "/monitor/mean_lap_time", qos_profile);
     p_fastest_lap_time_ = this->create_publisher<rviz_2d_overlay_msgs::msg::OverlayText>(
@@ -59,6 +65,13 @@ Monitor::Monitor(const std::string &node_name, const rclcpp::NodeOptions &option
 }
 
 Monitor::~Monitor() {}
+
+// Helper function for time formatting with 3 decimal places
+std::string Monitor::format_time_3dp(double time_val) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(3) << time_val;
+    return oss.str();
+}
 
 void Monitor::Run() {
     auto current_time = this->get_clock()->now();
@@ -109,8 +122,9 @@ void Monitor::Run() {
     // Publish obstacle information
     PublishObstacleInfo();
 
-    // Publish speed information
+    // Publish speed, steering information
     PublishSpeedInfo(odom);
+    PublishSteeringInput();
 }
 
 void Monitor::PublishSpeedInfo(const nav_msgs::msg::Odometry& odom) {
@@ -121,6 +135,14 @@ void Monitor::PublishSpeedInfo(const nav_msgs::msg::Odometry& odom) {
     std_msgs::msg::Float32 speed_msg;
     speed_msg.data = static_cast<float>(linear_velocity);
     p_current_speed_info_->publish(speed_msg);
+}
+
+void Monitor::PublishSteeringInput() {
+    if (b_is_steering_input_) {
+        std_msgs::msg::Float32 steering_msg;
+        steering_msg.data = i_current_steering_input_.drive.steering_angle;
+        p_steering_input_->publish(steering_msg);
+    }
 }
 
 void Monitor::UpdateLapInfo(const nav_msgs::msg::Odometry& frenet_odom) {
@@ -188,7 +210,7 @@ void Monitor::UpdateLapInfo(const nav_msgs::msg::Odometry& frenet_odom) {
             mean_lap_time_ = sum / recent_laps;
             
             RCLCPP_INFO(this->get_logger(), 
-                       "Lap %d completed! Time: %.2f s, Fastest: %.2f s, Mean: %.2f s, Mean CTE: %.3f m", 
+                       "Lap %d completed! Time: %.3f s, Fastest: %.3f s, Mean: %.3f s, Mean CTE: %.3f m", 
                        lap_count_, lap_time, fastest_lap_time_, mean_lap_time_, mean_cte_);
         }
         
@@ -227,10 +249,10 @@ void Monitor::PublishLapInfo() {
     
     // Create lap info text with current lap number, current lap time, and previous lap time
     std::string lap_text = "Lap: " + std::to_string(lap_count_) + 
-                          " | Lap Time: " + std::to_string(current_lap_time).substr(0, 5) + "s";
+                          " | Lap Time: " + format_time_3dp(current_lap_time) + "s";
     
     if (previous_lap_time_ > 0.0) {
-        lap_text += " | Prev. Lap Time: " + std::to_string(previous_lap_time_).substr(0, 5) + "s";
+        lap_text += " | Prev. Lap Time: " + format_time_3dp(previous_lap_time_) + "s";
     }
     
     lap_msg.text = lap_text;
@@ -246,7 +268,7 @@ void Monitor::PublishMeanLapTime() {
     if (lap_times_.empty()) {
         msg.text = "Mean Lap Time (5lap): N/A";
     } else {
-        msg.text = "Mean Lap Time (5lap): " + std::to_string(mean_lap_time_).substr(0, 5) + "s";
+        msg.text = "Mean Lap Time (5lap): " + format_time_3dp(mean_lap_time_) + "s";
     }
     
     p_mean_lap_time_->publish(msg);
@@ -260,7 +282,7 @@ void Monitor::PublishFastestLapTime() {
     if (fastest_lap_time_ == std::numeric_limits<double>::max()) {
         msg.text = "Fastest Lap Time: N/A";
     } else {
-        msg.text = "Fastest Lap Time: " + std::to_string(fastest_lap_time_).substr(0, 5) + "s";
+        msg.text = "Fastest Lap Time: " + format_time_3dp(fastest_lap_time_) + "s";
     }
     
     p_fastest_lap_time_->publish(msg);

@@ -30,9 +30,7 @@ Panels:
         - /Global Options1
         - /Status1
         - /Behavior state1/Topic1
-        - /Speed1/Status1
         - /Max CTE1/Topic1
-        - /Steering1
       Splitter Ratio: 0.5
     Tree Height: 795
 Visualization Manager:
@@ -297,7 +295,7 @@ Visualization Manager:
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /behavior_state_text
+        Value: /behavior_text
       Value: true
       font: DejaVu Sans Mono
       height: 498
@@ -307,35 +305,7 @@ Visualization Manager:
       text size: 18
       ver_alignment: top
       ver_dist: 20
-      width: 400
-    - Align Bottom: false
-      Background Alpha: 0.800000011920929
-      Background Color: 0; 0; 0
-      Class: rviz_2d_overlay_plugins/TextOverlay
-      Enabled: true
-      Foreground Alpha: 1
-      Foreground Color: 0; 229; 255
-      Invert Shadow: false
-      Name: Behavior time
-      Overtake BG Color Properties: false
-      Overtake FG Color Properties: true
-      Overtake Position Properties: true
-      Topic:
-        Depth: 5
-        Durability Policy: Volatile
-        History Policy: Keep Last
-        Reliability Policy: Reliable
-        Value: /behavior_time_text
-      Value: true
-      font: DejaVu Sans Mono
-      height: 128
-      hor_alignment: left
-      hor_dist: 10
-      line width: 2
-      text size: 18
-      ver_alignment: top
-      ver_dist: 60
-      width: 300
+      width: 800
     - Align Bottom: false
       Background Alpha: 0.800000011920929
       Background Color: 0; 0; 0
@@ -443,6 +413,34 @@ Visualization Manager:
       max value: 10
       med color: 255; 200; 0
       med color change threthold: 2
+      min value: 0
+      show caption: true
+      size: 128
+      text size: 14
+      top: 380
+    - Class: rviz_2d_overlay_plugins/PieChartOverlay
+      Enabled: true
+      Name: Steering
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /monitor/steering_input
+      Value: true
+      auto color change: false
+      background color: 255; 20; 147
+      backround alpha: 0
+      clockwise rotate direction: true
+      foreground alpha: 0.20000000298023224
+      foreground alpha 2: 0.20000000298023224
+      foreground color: 255; 20; 147
+      left: 150
+      max color: 255; 0; 0
+      max color change threthold: 0
+      max value: 0.5
+      med color: 255; 0; 0
+      med color change threthold: 0
       min value: 0
       show caption: true
       size: 128
@@ -584,82 +582,93 @@ Visualization Manager:
         Reliability Policy: Reliable
         Value: /detection/obstacles_markers
       Value: true
-    - Class: rviz_2d_overlay_plugins/PieChartOverlay
+    - Alpha: 1
+      Class: rviz_default_plugins/RobotModel
+      Collision Enabled: false
+      Description File: ""
+      Description Source: Topic
+      Description Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /opp_robot_description
       Enabled: true
-      Name: Steering
+      Links:
+        All Links Enabled: true
+        Expand Joint Details: false
+        Expand Link Details: false
+        Expand Tree: false
+        Link Tree Style: Links in Alphabetic Order
+        opp_racecar/back_left_wheel:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        opp_racecar/back_right_wheel:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        opp_racecar/base_link:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        opp_racecar/front_left_hinge:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        opp_racecar/front_left_wheel:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        opp_racecar/front_right_hinge:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+        opp_racecar/front_right_wheel:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+        opp_racecar/laser_model:
+          Alpha: 1
+          Show Axes: false
+          Show Trail: false
+          Value: true
+      Mass Properties:
+        Inertia: false
+        Mass: false
+      Name: RobotModel
+      TF Prefix: ""
+      Update Interval: 0
+      Value: true
+      Visual Enabled: true
+    - Class: rviz_default_plugins/MarkerArray
+      Enabled: true
+      Name: MarkerArray
+      Namespaces:
+        opp_local_waypoints: true
       Topic:
         Depth: 5
         Durability Policy: Volatile
         History Policy: Keep Last
         Reliability Policy: Reliable
-        Value: /monitor/steering_input
+        Value: /planning/opp_local_waypoints_markers
       Value: true
-      auto color change: false
-      background color: 255; 20; 147
-      backround alpha: 0
-      clockwise rotate direction: true
-      foreground alpha: 0.20000000298023224
-      foreground alpha 2: 0.20000000298023224
-      foreground color: 255; 20; 147
-      left: 160
-      max color: 255; 0; 0
-      max color change threthold: 0
-      max value: 0.44999998807907104
-      med color: 255; 0; 0
-      med color change threthold: 0
-      min value: 0
-      show caption: true
-      size: 128
-      text size: 14
-      top: 380
-    - Class: rviz_default_plugins/TF
+    - Class: rviz_default_plugins/MarkerArray
       Enabled: true
-      Frame Timeout: 15
-      Frames:
-        All Enabled: true
-        ego_racecar/back_left_wheel:
-          Value: true
-        ego_racecar/back_right_wheel:
-          Value: true
-        ego_racecar/base_link:
-          Value: true
-        ego_racecar/front_left_hinge:
-          Value: true
-        ego_racecar/front_left_wheel:
-          Value: true
-        ego_racecar/front_right_hinge:
-          Value: true
-        ego_racecar/front_right_wheel:
-          Value: true
-        ego_racecar/laser:
-          Value: true
-        ego_racecar/laser_model:
-          Value: true
-        map:
-          Value: true
-      Marker Scale: 1
-      Name: TF
-      Show Arrows: true
-      Show Axes: true
-      Show Names: true
-      Tree:
-        map:
-          ego_racecar/base_link:
-            ego_racecar/back_left_wheel:
-              {}
-            ego_racecar/back_right_wheel:
-              {}
-            ego_racecar/front_left_hinge:
-              ego_racecar/front_left_wheel:
-                {}
-            ego_racecar/front_right_hinge:
-              ego_racecar/front_right_wheel:
-                {}
-            ego_racecar/laser:
-              {}
-            ego_racecar/laser_model:
-              {}
-      Update Interval: 0
+      Name: Section Boundary
+      Namespaces:
+        {}
+      Topic:
+        Depth: 5
+        Durability Policy: Volatile
+        History Policy: Keep Last
+        Reliability Policy: Reliable
+        Value: /section_boundary_markers
       Value: true
   Enabled: true
   Global Options:
